@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="theme-color" content="#0f0f0f"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="DayCharter"/>
+<link rel="manifest" href="manifest.json"/>
+<title>DayCharter</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0a0a; --surface: #141414; --surface2: #1e1e1e; --border: #2a2a2a;
+    --accent: #c8ff00; --accent2: #ff6b35; --text: #f0f0f0; --muted: #666;
+    --done: #3a5a3a; --done-text: #7dde7d; --warn: #5a3a00; --warn-text: #ffb347;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; min-height: 100vh; overflow-x: hidden; }
+  #app { max-width: 480px; margin: 0 auto; padding: 0 0 100px; min-height: 100vh; }
+
+  .header { padding: 20px 20px 0; display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.5px; color: var(--accent); }
+  .logo span { color: var(--text); }
+  .date-chip { font-size: 11px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); padding: 4px 10px; border-radius: 20px; }
+
+  .checkin-bar { margin: 16px 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .time-field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 100px; }
+  .time-field label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .time-field input[type="time"] { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 16px; padding: 8px 10px; width: 100%; color-scheme: dark; }
+  .checkin-bar .btn-set { background: var(--accent); color: #000; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; border: none; border-radius: 10px; padding: 10px 16px; cursor: pointer; white-space: nowrap; align-self: flex-end; transition: opacity .15s; }
+  .checkin-bar .btn-set:hover { opacity: .85; }
+
+  .timeline-wrap { margin: 0 20px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; display: none; }
+  .timeline-wrap.visible { display: block; }
+  .tl-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .tl-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .tl-time { font-size: 12px; color: var(--accent); font-family: 'Syne', sans-serif; font-weight: 700; }
+  .tl-bar-bg { background: var(--surface2); border-radius: 4px; height: 6px; overflow: hidden; }
+  .tl-bar-fill { background: linear-gradient(90deg, var(--accent), var(--accent2)); height: 100%; border-radius: 4px; transition: width .5s; }
+
+  .add-task-section { margin: 0 20px 16px; }
+  .add-task-section textarea { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 14px; padding: 14px 16px; resize: none; outline: none; line-height: 1.5; transition: border-color .2s; }
+  .add-task-section textarea:focus { border-color: var(--accent); }
+  .task-meta { display: flex; gap: 8px; margin-top: 8px; align-items: center; flex-wrap: wrap; }
+  .task-meta input[type="number"] { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 14px; padding: 8px 10px; width: 80px; outline: none; }
+  .meta-label { font-size: 11px; color: var(--muted); }
+  .btn-add { background: var(--accent); color: #000; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; border: none; border-radius: 10px; padding: 10px 18px; cursor: pointer; margin-left: auto; transition: opacity .15s; }
+  .btn-add:hover { opacity: .85; }
+
+  .section-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin: 0 20px 10px; padding-top: 4px; }
+  .task-card { margin: 0 20px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; position: relative; overflow: hidden; }
+  .task-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent); }
+  .task-card.done { border-color: #2a3d2a; }
+  .task-card.done::before { background: var(--done-text); }
+  .task-card.overdue::before { background: var(--accent2); }
+  .task-card.snoozed::before { background: var(--warn-text); }
+
+  .task-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .task-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; line-height: 1.3; flex: 1; }
+  .task-card.done .task-name { text-decoration: line-through; color: var(--muted); }
+  .task-badges { display: flex; gap: 6px; flex-shrink: 0; align-items: center; }
+  .badge { font-size: 10px; padding: 3px 8px; border-radius: 20px; font-weight: 600; white-space: nowrap; }
+  .badge-time { background: var(--surface2); color: var(--muted); }
+  .badge-done { background: var(--done); color: var(--done-text); }
+  .badge-overdue { background: rgba(255,107,53,.15); color: var(--accent2); }
+  .badge-snooze { background: var(--warn); color: var(--warn-text); }
+
+  .task-time-row { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .task-time-row span { color: var(--text); }
+  .snooze-info { font-size: 11px; color: var(--warn-text); margin-top: 6px; }
+
+  .task-actions { display: flex; gap: 6px; margin-top: 10px; }
+  .btn-done, .btn-snooze, .btn-delete, .btn-edit { font-size: 11px; padding: 5px 10px; border-radius: 8px; border: none; cursor: pointer; font-family: 'DM Mono', monospace; font-weight: 500; transition: opacity .15s; }
+  .btn-done { background: var(--done); color: var(--done-text); }
+  .btn-snooze { background: var(--warn); color: var(--warn-text); }
+  .btn-delete { background: rgba(255,60,60,.1); color: #ff6060; margin-left: auto; }
+  .btn-edit { background: var(--surface2); color: var(--muted); }
+  .btn-done:hover, .btn-snooze:hover, .btn-delete:hover, .btn-edit:hover { opacity: .75; }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: none; align-items: flex-end; z-index: 100; padding: 20px; }
+  .modal-overlay.show { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 24px; width: 100%; max-width: 480px; margin: 0 auto; }
+  .modal-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px; margin-bottom: 8px; color: var(--accent); }
+  .modal-body { font-size: 14px; color: var(--muted); line-height: 1.5; margin-bottom: 20px; }
+  .modal-actions { display: flex; gap: 10px; }
+  .modal-actions button { flex: 1; padding: 12px; border-radius: 12px; border: none; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; }
+  .btn-confirm-done { background: var(--accent); color: #000; }
+  .btn-confirm-snooze { background: var(--surface2); color: var(--text); border: 1px solid var(--border) !important; }
+
+  .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: rgba(10,10,10,.95); backdrop-filter: blur(12px); border-top: 1px solid var(--border); display: flex; padding: 10px 20px 24px; }
+  .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 10px; font-family: 'DM Mono', monospace; transition: color .15s; }
+  .nav-btn.active { color: var(--accent); }
+  .nav-btn svg { width: 22px; height: 22px; }
+
+  .stats-view { padding: 0 20px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 14px; }
+  .stat-icon { font-size: 28px; }
+  .stat-val { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 24px; color: var(--accent); }
+  .stat-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  #notif-banner { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--accent); border-radius: 14px; padding: 12px 18px; font-size: 13px; color: var(--text); z-index: 200; max-width: 420px; width: calc(100% - 40px); display: flex; gap: 10px; align-items: center; box-shadow: 0 4px 24px rgba(200,255,0,.1); animation: slideDown .3s ease; }
+  @keyframes slideDown { from { opacity:0; transform: translateX(-50%) translateY(-20px); } }
+  .notif-close { background: none; border: none; color: var(--muted); cursor: pointer; margin-left: auto; font-size: 16px; }
+
+  .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 13px; }
+  .empty .emoji { font-size: 32px; margin-bottom: 10px; }
+  ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="logo">Day<span>Charter</span></div>
+    <div class="date-chip" id="date-chip"></div>
+  </div>
+
+  <div class="checkin-bar">
+    <div class="time-field"><label>Check-in</label><input type="time" id="checkin-time"/></div>
+    <div class="time-field"><label>Check-out</label><input type="time" id="checkout-time"/></div>
+    <button class="btn-set" id="btn-set-times">Set Day</button>
+  </div>
+
+  <div class="timeline-wrap" id="timeline-wrap">
+    <div class="tl-header">
+      <div class="tl-label">Day Progress</div>
+      <div class="tl-time" id="tl-time-remaining">— remaining</div>
+    </div>
+    <div class="tl-bar-bg"><div class="tl-bar-fill" id="tl-bar-fill" style="width:0%"></div></div>
+  </div>
+
+  <div id="view-planner">
+    <div class="add-task-section">
+      <textarea id="task-input" rows="2" placeholder="Describe your task… (e.g. 'Review Q2 billing report')"></textarea>
+      <div class="task-meta">
+        <span class="meta-label">Duration (min):</span>
+        <input type="number" id="task-duration" value="30" min="5" max="480"/>
+        <button class="btn-add" id="btn-add-task">+ Add</button>
+      </div>
+    </div>
+    <div class="section-label">Today's Charter</div>
+    <div id="tasks-container">
+      <div class="empty"><div class="emoji">📋</div>No tasks yet. Set your day times and add a task.</div>
+    </div>
+  </div>
+
+  <div id="view-stats" style="display:none">
+    <div class="section-label" style="margin-top:20px">Today's Summary</div>
+    <div class="stats-view" id="stats-container"></div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-btn active" id="nav-planner" onclick="switchView('planner')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      Planner
+    </button>
+    <button class="nav-btn" id="nav-stats" onclick="switchView('stats')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      Summary
+    </button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">⏰ Time's up!</div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn-confirm-done" onclick="confirmDone()">✓ Done</button>
+      <button class="btn-confirm-snooze" onclick="confirmSnooze()">⏱ Snooze 30m</button>
+    </div>
+  </div>
+</div>
+
+<div id="notif-banner" style="display:none"></div>
+
+<script>
+const STATE_KEY = 'daycharter_state';
+let state = { checkin:'', checkout:'', tasks:[] };
+let activeModalTaskId = null;
+let notifTimeout = null;
+const SNOOZE_MS = 30 * 60 * 1000;
+
+function saveState() { try { localStorage.setItem(STATE_KEY, JSON.stringify(state)); } catch(e){} }
+function loadState() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STATE_KEY)||'{}');
+    if (s && s.tasks) {
+      if (s.date === new Date().toDateString()) { state = s; }
+      else { state.checkin = s.checkin||''; state.checkout = s.checkout||''; }
+    }
+  } catch(e) {}
+  state.date = new Date().toDateString();
+}
+
+function init() {
+  loadState();
+  document.getElementById('date-chip').textContent = new Date().toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'});
+  if (state.checkin) document.getElementById('checkin-time').value = state.checkin;
+  if (state.checkout) document.getElementById('checkout-time').value = state.checkout;
+  if (state.checkin && state.checkout) showTimeline();
+  renderTasks();
+  setInterval(() => { updateTimeline(); checkTaskTimers(); }, 30000);
+  updateTimeline(); checkTaskTimers();
+  document.getElementById('btn-set-times').addEventListener('click', setTimes);
+  document.getElementById('btn-add-task').addEventListener('click', addTask);
+  document.getElementById('task-input').addEventListener('keydown', e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();addTask();} });
+}
+
+const timeToMin = t => { if(!t)return 0; const[h,m]=t.split(':').map(Number); return h*60+m; };
+const minToTime = m => { const h=Math.floor(m/60)%24,mm=m%60; return `${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; };
+const nowMin = () => { const n=new Date(); return n.getHours()*60+n.getMinutes(); };
+const fmtTime = t => { if(!t)return''; const[h,m]=t.split(':').map(Number); return `${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`; };
+const fmtDur = m => m<60 ? `${m}m` : `${Math.floor(m/60)}h${m%60?' '+(m%60)+'m':''}`;
+const escHtml = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function setTimes() {
+  const ci=document.getElementById('checkin-time').value, co=document.getElementById('checkout-time').value;
+  if(!ci||!co){showNotif('⚠️ Set both times');return;}
+  if(timeToMin(co)<=timeToMin(ci)){showNotif('⚠️ Check-out must be after check-in');return;}
+  state.checkin=ci; state.checkout=co; saveState(); showTimeline();
+  showNotif(`✓ Day set: ${fmtTime(ci)} – ${fmtTime(co)}`);
+  recalcTaskTimes(); renderTasks();
+}
+
+function showTimeline() { document.getElementById('timeline-wrap').classList.add('visible'); updateTimeline(); }
+
+function updateTimeline() {
+  if(!state.checkin||!state.checkout)return;
+  const start=timeToMin(state.checkin),end=timeToMin(state.checkout),now=nowMin();
+  const pct=end>start?Math.round(Math.max(0,Math.min(now-start,end-start))/(end-start)*100):0;
+  document.getElementById('tl-bar-fill').style.width=pct+'%';
+  const rem=Math.max(0,end-now);
+  document.getElementById('tl-time-remaining').textContent=rem>0?`${fmtDur(rem)} left`:'Day ended';
+}
+
+function recalcTaskTimes() {
+  if(!state.checkin)return;
+  let cur=timeToMin(state.checkin);
+  for(const t of state.tasks) if(!t.done){t.startTime=minToTime(cur);t.endTime=minToTime(cur+t.duration);cur+=t.duration;}
+  saveState();
+}
+
+function addTask() {
+  if(!state.checkin){showNotif('⚠️ Set check-in/out times first');return;}
+  const name=document.getElementById('task-input').value.trim();
+  const duration=parseInt(document.getElementById('task-duration').value)||30;
+  if(!name){showNotif('⚠️ Enter a task name');return;}
+  const pending=state.tasks.filter(t=>!t.done);
+  const lastEnd=pending.length?timeToMin(pending[pending.length-1].endTime):timeToMin(state.checkin);
+  state.tasks.push({id:Date.now().toString(),name,duration,startTime:minToTime(lastEnd),endTime:minToTime(lastEnd+duration),done:false,snoozedUntil:null,snoozeCount:0,timerFiredAt:null});
+  saveState(); renderTasks();
+  document.getElementById('task-input').value='';
+  document.getElementById('task-duration').value='30';
+}
+
+function renderTasks() {
+  const c=document.getElementById('tasks-container');
+  if(!state.tasks.length){c.innerHTML='<div class="empty"><div class="emoji">📋</div>No tasks yet. Set your day times and add a task.</div>';return;}
+  c.innerHTML=state.tasks.map(t=>{
+    const nowM=nowMin(),endMin=timeToMin(t.endTime);
+    const isOverdue=!t.done&&endMin<nowM&&t.endTime;
+    const isSnoozed=t.snoozedUntil&&!t.done;
+    const cls=t.done?'done':isOverdue?'overdue':isSnoozed?'snoozed':'';
+    let badge=`<span class="badge badge-time">${fmtDur(t.duration)}</span>`;
+    if(t.done)badge=`<span class="badge badge-done">✓ Done</span>`;
+    else if(isSnoozed)badge=`<span class="badge badge-snooze">⏱ Snoozed</span>`;
+    else if(isOverdue)badge=`<span class="badge badge-overdue">Overdue</span>`;
+    const timeRow=t.startTime&&t.endTime?`<div class="task-time-row">${fmtTime(t.startTime)} → <span>${fmtTime(t.endTime)}</span></div>`:'';
+    const snoozeInfo=isSnoozed?`<div class="snooze-info">Reminder in ~${Math.max(0,Math.round((t.snoozedUntil-Date.now())/60000))} min (${t.snoozeCount}× snoozed)</div>`:'';
+    const actions=t.done
+      ?`<div class="task-actions"><button class="btn-delete" onclick="deleteTask('${t.id}')">🗑 Remove</button></div>`
+      :`<div class="task-actions"><button class="btn-done" onclick="markDone('${t.id}')">✓ Done</button><button class="btn-snooze" onclick="snoozeTask('${t.id}')">⏱ Snooze</button><button class="btn-edit" onclick="editDuration('${t.id}')">✏ Edit</button><button class="btn-delete" onclick="deleteTask('${t.id}')">🗑</button></div>`;
+    return `<div class="task-card ${cls}"><div class="task-top"><div class="task-name">${escHtml(t.name)}</div><div class="task-badges">${badge}</div></div>${timeRow}${snoozeInfo}${actions}</div>`;
+  }).join('');
+}
+
+function markDone(id){const t=state.tasks.find(x=>x.id===id);if(!t)return;t.done=true;t.snoozedUntil=null;saveState();recalcTaskTimes();renderTasks();showNotif(`✓ "${t.name}" marked done`);}
+function snoozeTask(id){const t=state.tasks.find(x=>x.id===id);if(!t)return;t.snoozedUntil=Date.now()+SNOOZE_MS;t.snoozeCount=(t.snoozeCount||0)+1;saveState();renderTasks();showNotif(`⏱ Snoozed 30 min`);}
+function deleteTask(id){state.tasks=state.tasks.filter(x=>x.id!==id);saveState();recalcTaskTimes();renderTasks();}
+function editDuration(id){
+  const t=state.tasks.find(x=>x.id===id);if(!t)return;
+  const val=prompt(`New duration for "${t.name}" (min):`,t.duration);
+  if(!val)return;const d=parseInt(val);
+  if(isNaN(d)||d<1){showNotif('⚠️ Invalid');return;}
+  t.duration=d;saveState();recalcTaskTimes();renderTasks();
+}
+
+function checkTaskTimers(){
+  const now=Date.now(),nowM=nowMin();
+  for(const t of state.tasks){
+    if(t.done)continue;
+    if(t.endTime&&timeToMin(t.endTime)<=nowM&&!t.timerFiredAt&&!t.snoozedUntil){t.timerFiredAt=now;saveState();openModal(t.id);return;}
+    if(t.snoozedUntil&&now>=t.snoozedUntil){t.snoozedUntil=null;t.timerFiredAt=now;saveState();openModal(t.id);return;}
+  }
+}
+
+function openModal(taskId){
+  const t=state.tasks.find(x=>x.id===taskId);if(!t)return;
+  activeModalTaskId=taskId;
+  document.getElementById('modal-title').textContent=t.snoozeCount>0?'⏰ Reminder!':'⏰ Time\'s up!';
+  document.getElementById('modal-body').innerHTML=`<strong style="color:var(--text)">${escHtml(t.name)}</strong><br/>${fmtTime(t.startTime)} – ${fmtTime(t.endTime)} (${fmtDur(t.duration)})<br/>${t.snoozeCount>0?`Snoozed ${t.snoozeCount}× already.`:'Did you complete this task?'}`;
+  document.getElementById('modal-overlay').classList.add('show');
+  if('Notification' in window){
+    if(Notification.permission==='granted') new Notification('DayCharter ⏰',{body:`Time's up: ${t.name}`});
+    else if(Notification.permission!=='denied') Notification.requestPermission().then(p=>{if(p==='granted')new Notification('DayCharter ⏰',{body:`Time's up: ${t.name}`});});
+  }
+}
+function confirmDone(){if(activeModalTaskId)markDone(activeModalTaskId);closeModal();}
+function confirmSnooze(){if(activeModalTaskId)snoozeTask(activeModalTaskId);closeModal();}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('show');activeModalTaskId=null;}
+document.getElementById('modal-overlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
+
+function showNotif(msg){
+  clearTimeout(notifTimeout);
+  const el=document.getElementById('notif-banner');
+  el.style.display='flex';el.innerHTML=`<span>${msg}</span><button class="notif-close" onclick="hideNotif()">×</button>`;
+  notifTimeout=setTimeout(hideNotif,3500);
+}
+function hideNotif(){document.getElementById('notif-banner').style.display='none';}
+
+function renderStats(){
+  const total=state.tasks.length,done=state.tasks.filter(t=>t.done).length;
+  const totalMin=state.tasks.reduce((s,t)=>s+t.duration,0);
+  const doneMin=state.tasks.filter(t=>t.done).reduce((s,t)=>s+t.duration,0);
+  const snoozed=state.tasks.filter(t=>t.snoozedUntil&&!t.done).length;
+  document.getElementById('stats-container').innerHTML=`
+    <div class="stat-card"><div class="stat-icon">✅</div><div><div class="stat-val">${done}/${total}</div><div class="stat-desc">Tasks completed</div></div></div>
+    <div class="stat-card"><div class="stat-icon">⏱</div><div><div class="stat-val">${fmtDur(doneMin)}</div><div class="stat-desc">of ${fmtDur(totalMin)} planned, done</div></div></div>
+    <div class="stat-card"><div class="stat-icon">📋</div><div><div class="stat-val">${total-done}</div><div class="stat-desc">Tasks still pending</div></div></div>
+    <div class="stat-card"><div class="stat-icon">💤</div><div><div class="stat-val">${snoozed}</div><div class="stat-desc">Tasks snoozed</div></div></div>`;
+}
+
+function switchView(v){
+  document.getElementById('view-planner').style.display=v==='planner'?'':'none';
+  document.getElementById('view-stats').style.display=v==='stats'?'':'none';
+  document.getElementById('nav-planner').classList.toggle('active',v==='planner');
+  document.getElementById('nav-stats').classList.toggle('active',v==='stats');
+  if(v==='stats')renderStats();
+}
+
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+init();
+</script>
+</body>
+</html>
